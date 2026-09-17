@@ -1,0 +1,151 @@
+<!-- clue1.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clue</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #004080, #0066cc);
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 800px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      box-sizing: border-box;
+    }
+    
+img {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  margin: 20px auto;
+  display: block;
+  border-radius: 10px;
+}
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 15px;
+    }
+    .clue {
+      font-size: 1.2em;
+      margin: 20px 0;
+    }
+    .letter {
+      font-size: 2em;
+      font-weight: bold;
+      margin: 20px 0;
+      color: #ffeb3b;
+    }
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #fff;
+      background: #0066cc;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+    a:hover {
+      background: #004080;
+    }
+   @media (max-width: 600px) {
+  h1 { font-size: 1.5em; }
+  .clue { font-size: 1em; }
+  .letter { font-size: 1.5em; }
+  a { font-size: 1em; padding: 8px 16px; }
+  .container { padding: 20px; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Clue 3</h1>
+    <img src="images/instruments.png" alt="Clue 3 Image">
+    <div id="audio-button-container"></div>
+   <script>
+  window.addEventListener('load', function () {
+    const audio = new Audio('images/Music.mp3');
+    audio.loop = true;
+    audio.volume = 1.0;
+
+    audio.play().then(() => {
+      console.log('Audio is playing automatically.');
+    }).catch(error => {
+      console.log('Autoplay blocked, waiting for user interaction.', error);
+
+      const buttonWrapper = document.createElement('div');
+      buttonWrapper.style.border = '2px solid #fff';
+      buttonWrapper.style.borderRadius = '15px';
+      buttonWrapper.style.padding = '20px';
+      buttonWrapper.style.marginTop = '20px';
+      buttonWrapper.style.background = 'rgba(255, 255, 255, 0.1)';
+      buttonWrapper.style.backdropFilter = 'blur(10px)';
+      buttonWrapper.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+      buttonWrapper.style.textAlign = 'center';
+
+      const toggleButton = document.createElement('button');
+      toggleButton.textContent = "▶ Play Sound";
+      toggleButton.style.fontSize = '1.2em';
+      toggleButton.style.padding = '10px 20px';
+      toggleButton.style.border = 'none';
+      toggleButton.style.borderRadius = '10px';
+      toggleButton.style.backgroundColor = '#0066cc';
+      toggleButton.style.color = '#fff';
+      toggleButton.style.cursor = 'pointer';
+      toggleButton.style.transition = 'background 0.3s';
+
+      toggleButton.addEventListener('mouseover', () => {
+        toggleButton.style.backgroundColor = '#004080';
+      });
+      toggleButton.addEventListener('mouseout', () => {
+        toggleButton.style.backgroundColor = '#0066cc';
+      });
+
+      let isPlaying = false;
+
+      toggleButton.addEventListener('click', function () {
+        if (!isPlaying) {
+          audio.play();
+          toggleButton.textContent = "⏸ Pause Sound";
+          isPlaying = true;
+        } else {
+          audio.pause();
+          toggleButton.textContent = "▶ Play Sound";
+          isPlaying = false;
+        }
+      });
+
+      buttonWrapper.appendChild(toggleButton);
+      document.getElementById('audio-button-container').appendChild(buttonWrapper);
+    });
+  });
+</script>
+
+
+    <p class="clue">QMB Room ???</p>
+    <!--
+    <p class="letter">Letter code: BANZAI</p>
+    -->
+  </div>
+</body>
+</html>
