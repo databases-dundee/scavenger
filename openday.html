@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traffic Light Simulator — Raspberry Pi Pico Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Fraunces:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #faf9f6;
+    color: #1a1a18;
+    line-height: 1.7;
+  }
+
+  .lab-wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+
+  .lab-header {
+    border-bottom: 2px solid #1a1a18;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .lab-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #777;
+    margin-bottom: 0.5rem;
+  }
+
+  .lab-title {
+    font-family: 'Fraunces', serif;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .lab-subtitle {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.65;
+  }
+
+  .traffic-icon {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #222;
+    border-radius: 8px;
+    padding: 6px;
+    flex-shrink: 0;
+  }
+  .tl-dot { width: 13px; height: 13px; border-radius: 50%; }
+  .tl-r { background: #e74c3c; }
+  .tl-y { background: #f39c12; }
+  .tl-g { background: #2ecc71; }
+
+  .meta-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+    background: #f0ede6;
+    border: 0.5px solid #d8d4cc;
+    border-radius: 20px;
+    padding: 4px 12px;
+  }
+
+  .section {
+    margin-bottom: 2.5rem;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .step-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    background: #1a1a18;
+    color: #faf9f6;
+    border-radius: 5px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 21px;
+    font-weight: 600;
+  }
+
+  .prose {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #1a1a18;
+  }
+
+  .prose p { margin-bottom: 0.75rem; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .parts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 0.85rem;
+  }
+
+  .part-card {
+    background: #fff;
+    border: 0.5px solid #d8d4cc;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+  }
+
+  .part-qty {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 3px;
+  }
+
+  .part-name { font-weight: 500; }
+
+  .wiring-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 0.85rem;
+    background: #fff;
+    border: 0.5px solid #d8d4cc;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .wiring-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #777;
+    background: #f5f2ec;
+    border-bottom: 0.5px solid #d8d4cc;
+    padding: 8px 12px;
+  }
+
+  .wiring-table td {
+    padding: 9px 12px;
+    border-bottom: 0.5px solid #e8e4dc;
+    vertical-align: middle;
+  }
+
+  .wiring-table tr:last-child td { border-bottom: none; }
+
+  .led-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .red-dot { background: #e74c3c; }
+  .yellow-dot { background: #f39c12; }
+  .green-dot { background: #2ecc71; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+  .pin-badge {
+    display: inline-block;
+    background: #f0ede6;
+    border: 0.5px solid #d0ccc4;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 1px 6px;
+  }
+
+  .diagram-box {
+    background: #f0ede6;
+    border: 0.5px solid #d8d4cc;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 0.85rem;
+  }
+
+  .diagram-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #888;
+    margin-bottom: 0.75rem;
+  }
+
+  .code-block {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 1.4rem 1.4rem;
+    overflow-x: auto;
+    margin-top: 0.85rem;
+  }
+
+  .code-block pre {
+    background: #1a1a2e;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #cdd6f4;
+    white-space: pre;
+  }
+
+  .kw { color: #cba6f7; }
+  .cm { color: #6c7086; font-style: italic; }
+  .fn { color: #89b4fa; }
+  .num { color: #fab387; }
+  .str { color: #a6e3a1; }
+  .var2 { color: #f38ba8; }
+
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 0.9rem 1rem;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.65;
+    margin-top: 0.85rem;
+  }
+
+  .callout-tip {
+    background: #eaf6ee;
+    border: 0.5px solid #a8d8b4;
+    color: #1a5c2a;
+  }
+
+  .callout-warn {
+    background: #fef6e4;
+    border: 0.5px solid #f0c060;
+    color: #7a4c00;
+  }
+
+  .callout-info {
+    background: #e8f1fb;
+    border: 0.5px solid #a8c8f0;
+    color: #1a3c6a;
+  }
+
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .step-list { list-style: none; padding: 0; margin-top: 0.85rem; }
+  .step-list li {
+    display: flex;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 0.5px solid #e8e4dc;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 20px;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: #f0ede6;
+    border: 0.5px solid #d0ccc4;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .challenge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 0.85rem;
+  }
+
+  .challenge-card {
+    background: #fff;
+    border: 0.5px solid #d8d4cc;
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+  }
+
+  .challenge-level {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+
+  .level-easy { color: #1a9e52; }
+  .level-medium { color: #b87000; }
+  .level-hard { color: #c0392b; }
+
+  .challenge-card p { font-size: 14px; line-height: 1.55; color: #333; }
+
+  hr.divider {
+    border: none;
+    border-top: 0.5px solid #d8d4cc;
+    margin: 2.5rem 0;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .lab-wrap { padding: 1rem; }
+    .code-block { border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+<div class="lab-wrap">
+
+  <header class="lab-header">
+    <div class="lab-label">Raspberry Pi Pico</div>
+    <h1 class="lab-title">
+      <span class="traffic-icon">
+        <span class="tl-dot tl-r"></span>
+        <span class="tl-dot tl-y"></span>
+        <span class="tl-dot tl-g"></span>
+      </span>
+      Traffic Light Simulator
+    </h1>
+    <p class="lab-subtitle">We're going to wire up a circuit on a breadboard, then write MicroPython code to control LEDs just like a real traffic light.</p>
+  </header>
+
+  <section class="section">
+    <div class="section-heading">
+      <h2 class="section-title">Your Goal</h2>
+    </div>
+    <div class="prose">
+      <p>A lot of Computing is about programming computers to get them to do things in the 'software' world, but we also need to program systems to do stuff in the real world
+        that takes input from sensors and performs actions (like a thermostat turning on the heating when the temperature is too low, or a smoke
+        alarm making a noise when it detects...well, smoke)
+      </p>
+      <p>No previous experience with electronics or Python is needed — every step is explained from scratch.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">PARTS LIST</span>
+      <h2 class="section-title">Here's what you'll need (all of which should be in your box!)</h2>
+    </div>
+    <div class="parts-grid">
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Raspberry Pi Pico</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Breadboard</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Red LED</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Yellow LED</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Green LED</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Resistor</div></div>
+      <div class="part-card"><div class="part-qty">× 2-5+</div><div class="part-name">Jumper wires</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Push Button</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Micro USB cable</div></div>
+      <div class="part-card"><div class="part-qty">× 1</div><div class="part-name">Computer with VS Code (the thing you're sitting in front of right now)</div></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 1</span>
+      <h2 class="section-title">Understand the breadboard</h2>
+    </div>
+    <div class="prose">
+      <p>A breadboard lets you build circuits without soldering. The holes are connected in rows — components placed in the same row are electrically joined. The long rails down each side (marked <strong>+</strong> and <strong>−</strong>) run the full length of the board and are used for power and ground.</p>
+    </div>
+    <img src="./breadb.png" style="width: 100%; max-width: 100%; display: block;"/>
+    <div class="callout callout-tip">
+      <span class="callout-icon">✓</span>
+      <span>Each set of 5 holes in a row (a–e on one side, f–j on the other) are connected to each other. The two halves of the board across the gap are <strong>not</strong> connected.</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 2</span>
+      <h2 class="section-title">Understand LEDs</h2>
+    </div>
+    <div class="prose">
+      <p>An LED (Light Emitting Diode) only allows current to flow in one direction. It has two legs: the <strong>longer leg is the anode (+)</strong> and must connect toward the positive supply (a GPIO pin), and the <strong>shorter leg is the cathode (−)</strong> and must connect toward ground (GND).</p>
+      <p>If an LED doesn't light up, try flipping it around — it's probably in the wrong way.</p>
+    </div>
+    <div class="diagram-box">
+      <div class="diagram-title">LED leg identification</div>
+      <img src="./leds.png" style="width:100%;max-width:100%;display:block"/>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 3</span>
+      <h2 class="section-title">Wire up the circuit</h2>
+    </div>
+    <div class="prose">
+      <p>Wire up the circuit like so (I've taken a picture of my circuit for reference):
+      <ul class="step-list">
+      <li><span class="step-num">1.</span><span>Plug the long leg of the <strong>red</strong> LED into Pin <strong>7</strong> and the short leg into one of the power rails</span></li>
+      <li><span class="step-num">2.</span><span>Plug the long leg of the <strong>yellow</strong> LED into Pin <strong>10</strong> and the short leg into the same power rail</span></li>
+      <li><span class="step-num">3.</span><span>Plug the long leg of the <strong>green</strong> LED into Pin <strong>13</strong> and the short leg into the same power rail</span></li>
+      <li><span class="step-num">4.</span><span>Plug one end of the resistor into the power rail, and the other end into one of the <strong>G</strong> pins</span></li>
+    </ul>
+      </p>
+        <img src="./wiring.png" style="width:100%;max-width:100%;display:block"/>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span>The resistor is <strong>super important</strong>. It protects both the LED and the Raspberry Pi from overheating and going up in smoke (this happens at least twice a year).</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 4</span>
+      <h2 class="section-title">Set up VS Code</h2>
+    </div>
+    <div class="prose">
+      <p>Visual Studio Code (VS Code) is the code editor you'll use to write and run your program on the Pico. Follow these steps to get connected.</p>
+    </div>
+    <ul class="step-list">
+      <li><span class="step-num">1.</span><span>Plug the Pico into your computer using the micro USB cable.</span></li>
+      <li><span class="step-num">2.</span><span>VS Code is already open for you. When you plug it in, you should see a nice confirmation message like this:</span></li>
+        <img src="./connected.png" style="width:100%;max-width:100%;display:block"/>
+      <li><span class="step-num">3.</span><span>To run a quick test, type <code>print("Hello!")</code> into the code editor and press the 'Run' button at the bottom (<strong>not</strong></srong> the one up top). If you see the message printed back, everything is working.</span></li>
+        <img src="./run.png" style="width:100%;max-width:100%;display:block"/>
+    </ul>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 5</span>
+      <h2 class="section-title">Test your LEDs</h2>
+    </div>
+    <div class="prose">
+      <p>Before writing the full program, let's test each LED individually. In the code editor, type or copypaste the code below, and click the Run button. All being well, each LED should turn on briefly then off.</p>
+    </div>
+    <div class="code-block">
+      <pre><span class="cm"># Test all three LEDs one by one</span>
+<span class="kw">from</span> machine <span class="kw">import</span> Pin
+<span class="kw">from</span> time <span class="kw">import</span> sleep
+
+<span class="cm"># Set up each LED pin as an output</span>
+<span class="var2">red</span>    = Pin(<span class="num">7</span>, Pin.OUT)
+<span class="var2">yellow</span> = Pin(<span class="num">10</span>, Pin.OUT)
+<span class="var2">green</span>  = Pin(<span class="num">13</span>, Pin.OUT)
+
+<span class="cm"># Test red</span>
+<span class="var2">red</span>.<span class="fn">on</span>()   <span class="cm"># turn on</span>
+<span class="fn">sleep</span>(<span class="num">1</span>)
+<span class="var2">red</span>.<span class="fn">off</span>()   <span class="cm"># turn off</span>
+
+<span class="cm"># Test yellow</span>
+<span class="var2">yellow</span>.<span class="fn">on</span>() 
+<span class="fn">sleep</span>(<span class="num">1</span>)
+<span class="var2">yellow</span>.<span class="fn">off</span>()
+
+<span class="cm"># Test green</span>
+<span class="var2">green</span>.<span class="fn">on</span>() 
+<span class="fn">sleep</span>(<span class="num">1</span>)
+<span class="var2">green</span>.<span class="fn">off</span>()
+
+<span class="fn">print</span>(<span class="str">"LED test complete!"</span>)</pre>
+    </div>
+    <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <span>If an LED doesn't light up, check: (1) the legs are the right way around, (2) the correct pin number is used in your code.</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">STEP 6</span>
+      <h2 class="section-title">Write the traffic light program</h2>
+    </div>
+    <div class="prose">
+      <p>Now for the main event. A UK traffic light follows this sequence: <strong>Green → Yellow → Red → Red+Yellow → Green</strong>.</p>
+      <p>You've seen from the code above how to turn an LED on/off, and how to pause for a bit (using the <code>sleep()</code> function), so you should be able to work this out for yourself! Notice in 
+      the code below that there is now a function called <code>all_off</code> which, as the name suggests, turns all the LEDs off! You can run this function by writing <code>all_off()</code></p>
+      <p>If you get stuck, the solution is hidden below</p>
+      <div class="callout callout-warn">
+      <span class="callout-icon">⚠</span>
+      <details>
+    <summary>SPOILER ALERT</summary>
+      <div class="code-block">
+        <pre>
+        <span class="cm"># GREEN — go!</span>
+        <span class="fn">all_off</span>()
+        <span class="var2">green</span>.<span class="fn">on</span>()
+        <span class="fn">sleep</span>(<span class="num">3</span>)
+
+        <span class="cm"># YELLOW — get ready to stop</span>
+        <span class="fn">all_off</span>()
+        <span class="var2">yellow</span>.<span class="fn">on</span>()
+        <span class="fn">sleep</span>(<span class="num">1</span>)
+
+        <span class="cm"># RED — stop!</span>
+        <span class="fn">all_off</span>()
+        <span class="var2">red</span>.<span class="fn">on</span>()
+        <span class="fn">sleep</span>(<span class="num">3</span>)
+
+        <span class="cm"># RED + YELLOW — get ready to go</span>
+        <span class="var2">yellow</span>.<span class="fn">on</span>()
+        <span class="fn">sleep</span>(<span class="num">1</span>)</pre>
+      </div>
+    </details>
+    </div>
+      
+    </div>
+    <div class="code-block">
+      <pre><span class="cm"># Traffic Light Simulator — Raspberry Pi Pico
+# Controls red, yellow and green LEDs on GP15, GP14, GP13</span>
+
+<span class="kw">from</span> machine <span class="kw">import</span> Pin
+<span class="kw">from</span> time <span class="kw">import</span> sleep
+
+<span class="cm"># --- Setup ---</span>
+<span class="var2">red</span>    = Pin(<span class="num">7</span>, Pin.OUT)
+<span class="var2">yellow</span> = Pin(<span class="num">10</span>, Pin.OUT)
+<span class="var2">green</span>  = Pin(<span class="num">13</span>, Pin.OUT)
+
+<span class="kw">def</span> <span class="fn">all_off</span>():
+    <span class="str">"""Turn all LEDs off."""</span>
+    <span class="var2">red</span>.<span class="fn">off</span>()
+    <span class="var2">yellow</span>.<span class="fn">off</span>()
+    <span class="var2">green</span>.<span class="fn">off</span>()
+
+<span class="cm"># --- Main loop ---</span>
+<span class="fn">print</span>(<span class="str">"Traffic light running... press Stop to end."</span>)
+
+<span class="cm"># "While True" means "do this stuff forever or until we manually stop it"</span>
+<span class="kw">while True</span>:
+
+    <span class="cm"># GREEN — go!</span>
+    <span class="cm">Code for green light only (for 5-6 seconds)</span>
+
+
+    <span class="cm"># YELLOW — get ready to stop</span>
+    <span class="cm">Code for yellow light only (maybe 1-2 seconds)</span>
+
+
+    <span class="cm"># RED — stop!</span>
+    <span class="cm">Code for red light only (3-4 seconds)</span>
+
+
+    <span class="cm"># RED + YELLOW — get ready to go</span>
+    <span class="cm">Code for red and yellow light together (1-2 seconds)</span>
+
+    </div>
+    <div class="callout callout-tip">
+      <span class="callout-icon">✓</span>
+      <span>The <code>while True:</code> loop runs forever. To stop it, click the <strong>Stop</strong> button (in case that wasn't obvious)</span>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section">
+    <div class="section-heading">
+      <span class="step-badge">GOING FURTHER</span>
+      <h2 class="section-title">Pedestrian crossing</h2>
+    </div>
+    <div class="prose" style="margin-bottom:0.85rem;">
+      <p>If you've done that, let's try and get the button involved! This is going to simulate a pedestrian crossing: when the pedestrian presses the button, it triggers a red light.</p>
+      <p>Here are the steps to get the button wired up:</p>
+      <ul class="step-list">
+      <li><span class="step-num">1.</span><span>Place the button on the breadboard so that it bridges the centre gap</span></li>
+      <li><span class="step-num">2.</span><span>Wire one corner to a <strong>3V</strong> pin on the Raspberry Pi</span></li>
+      <li><span class="step-num">3.</span><span>Wire the opposite corner to Pin <strong>15</strong></span></li>
+      <p>Below is a picture of my wiring</p>
+        <img src="./button.png" style="width:100%;max-width:100%;display:block"/>
+    </ul>
+    
+    <div class="section-heading" style="margin-top:1.5rem;">
+      <h3 style="font-family:'Fraunces',serif;font-size:17px;font-weight:600;">How the code works differently</h3>
+    </div>
+    <div class="prose">
+      <p>The original program uses <code>sleep()</code>, which completely pauses the code; it can't detect a button press while it's waiting. To fix this, the 'sleep' phase is replaced with a short 
+        polling loop that checks the state of the button every 100 ms. If the button is pressed, the loop ends early and triggers the red phase.</p>
+    </div>
+    <div class="callout callout-tip" style="margin-top:0.5rem;">
+      <span class="callout-icon">✓</span>
+      <span><strong>Polling</strong> means repeatedly checking something at short intervals. It's a simple alternative to the "interrupt", which we introduce in 1st year!</span>
+    </div>
+    <div class="prose">
+      <p>Create a new file, type (or copy) the code below, and save it as <code>pedestrian.py</code> on the Pico. Click Run, then try pressing the button while the green light is on.</p>
+    </div>
+    <div class="code-block">
+      <pre><span class="cm"># Pedestrian Crossing — Raspberry Pi Pico
+# Button on GP15 triggers a red phase during green</span>
+
+<span class="kw">from</span> machine <span class="kw">import</span> Pin
+<span class="kw">from</span> time <span class="kw">import</span> sleep
+
+<span class="cm"># --- Setup ---</span>
+<span class="var2">red</span>    = Pin(<span class="num">7</span>, Pin.OUT)
+<span class="var2">yellow</span> = Pin(<span class="num">10</span>, Pin.OUT)
+<span class="var2">green</span>  = Pin(<span class="num">13</span>, Pin.OUT)
+<span class="var2">button</span> = Pin(<span class="num">15</span>, Pin.IN, Pin.PULL_DOWN)  <span class="cm"># reads 0 normally, 1 when pressed</span>
+
+<span class="kw">def</span> <span class="fn">all_off</span>():
+    <span class="str">"""Turn all LEDs off."""</span>
+    <span class="var2">red</span>.<span class="fn">off</span>()
+    <span class="var2">yellow</span>.<span class="fn">off</span>()
+    <span class="var2">green</span>.<span class="fn">off</span>()
+
+<span class="kw">def</span> <span class="fn">wait_or_press</span>(seconds):
+    <span class="str">"""Wait, but return True early if the button is pressed."""</span>
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(seconds * <span class="num">10</span>):    <span class="cm"># loop once per 100ms</span>
+        <span class="kw">if</span> <span class="var2">button</span>.<span class="fn">value</span>() == <span class="num">1</span>:       <span class="cm"># button pressed</span>
+            <span class="kw">return True</span>
+            <span class="fn">sleep</span>(<span class="num">0.1</span>)
+    <span class="kw">return False</span>
+
+<span class="kw">def</span> <span class="fn">go_red</span>():
+    <span class="str">"""Run yellow then red, then pause for pedestrians."""</span>
+    <span class="fn">all_off</span>()
+    <span class="var2">yellow</span>.<span class="fn">on</span>()
+    <span class="fn">sleep</span>(<span class="num">1</span>)
+    <span class="fn">all_off</span>()
+    <span class="var2">red</span>.<span class="fn">on</span>()
+    <span class="fn">sleep</span>(<span class="num">4</span>)                   <span class="cm"># time for pedestrians to cross</span>
+
+  <span class="cm"># --- Main loop ---</span>
+  <span class="fn">print</span>(<span class="str">"Running — press button for pedestrian crossing."</span>)
+
+  <span class="kw">while True</span>:
+
+    <span class="cm"># GREEN — watch for button press</span>
+    <span class="fn">all_off</span>()
+    <span class="var2">green</span>.<span class="fn">on</span>()
+    <span class="var2">pressed</span> = <span class="fn">wait_or_press</span>(<span class="num">10</span>)     <span class="cm"># green lasts up to 10 seconds</span>
+
+    <span class="kw">if</span> <span class="var2">pressed</span>:
+        <span class="fn">sleep</span>(<span class="num">2</span>)              <span class="cm"># short delay before changing</span>
+
+    <span class="fn">go_red</span>()                        <span class="cm"># red phase (automatic or triggered)</span>
+
+    <span class="cm"># RED + YELLOW — get ready to go</span>
+    <span class="var2">yellow</span>.<span class="fn">on</span>()
+    <span class="fn">sleep</span>(<span class="num">1</span>)</pre>
+    </div>
+    <div class="callout callout-warn" style="margin-top:0.85rem;">
+      <span class="callout-icon">⚠</span>
+      <span>Pressing the button during the red or yellow phases has no effect — the code only checks for presses while the green light is on. This is intentional: a real crossing won't change again until the next green phase.</span>
+    </div>
+
+  </section>
+
+  <hr class="divider">
+
+
+</div>
+</body>
+</html>
