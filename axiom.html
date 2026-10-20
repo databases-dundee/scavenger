@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPERATION: REBOOT — AXIOM Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0A0E1A;
+    --surface:   #111827;
+    --panel:     #1A2744;
+    --border:    #1E3A5F;
+    --green:     #00FFB2;
+    --green-dim: #00CC8E;
+    --green-glow:rgba(0,255,178,0.15);
+    --red:       #FF3B3B;
+    --red-glow:  rgba(255,59,59,0.15);
+    --amber:     #FFB020;
+    --muted:     #7B8FAB;
+    --text:      #C8D8F0;
+    --white:     #E8F0FF;
+  }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:'JetBrains Mono','Courier New',monospace; font-size:13px; overflow:hidden; }
+  body::after { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px); pointer-events:none; z-index:9999; }
+
+  #axiom-header { height:48px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 20px; flex-shrink:0; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .axiom-logo { font-size:18px; font-weight:800; color:var(--green); letter-spacing:4px; text-shadow:0 0 20px var(--green); }
+  .header-subtitle { font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  #status-ticker { display:flex; align-items:center; gap:10px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; transition:color 0.4s; }
+  .ticker-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  #status-ticker.breach .ticker-dot { background:var(--red); box-shadow:0 0 8px var(--red); animation:pulse-fast 0.4s infinite; }
+  @keyframes pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  #status-ticker.breach { color:var(--red); }
+  #status-ticker.restored { color:var(--green); }
+  #status-ticker.restored .ticker-dot { animation:none; opacity:1; }
+  .header-right { display:flex; align-items:center; gap:20px; font-size:11px; color:var(--muted); }
+  #clock { color:var(--text); font-weight:600; }
+
+  #app { display:flex; height:calc(100vh - 48px); overflow:hidden; }
+  #sidebar { width:220px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; }
+  .sidebar-section { padding:16px; border-bottom:1px solid var(--border); }
+  .sidebar-label { font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+  .system-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:4px; cursor:pointer; transition:background 0.2s; margin-bottom:4px; border:1px solid transparent; }
+  .system-item:hover { background:rgba(255,255,255,0.04); }
+  .system-item.locked { opacity:0.4; cursor:not-allowed; }
+  .system-item.completed .sys-icon { color:var(--green); }
+  .sys-icon { font-size:14px; width:20px; text-align:center; flex-shrink:0; }
+  .sys-name { font-size:11px; color:var(--text); line-height:1.3; }
+  .sys-diff { font-size:9px; color:var(--muted); margin-top:2px; }
+  .lock-icon { margin-left:auto; font-size:10px; color:var(--muted); }
+  .fragment-slot { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:11px; border-bottom:1px solid var(--border); }
+  .fragment-slot:last-child { border-bottom:none; }
+  .fragment-label { color:var(--muted); flex:1; }
+  .fragment-value { font-weight:700; color:var(--green); letter-spacing:2px; min-width:60px; text-align:right; }
+  .fragment-value.empty { color:var(--border); }
+  .token-row { display:flex; gap:6px; margin-top:8px; }
+  .token { width:28px; height:28px; border-radius:50%; background:var(--amber); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; transition:all 0.2s; box-shadow:0 0 8px rgba(255,176,32,0.4); }
+  .token:hover { transform:scale(1.1); }
+  .token.spent { background:var(--border); box-shadow:none; opacity:0.4; cursor:not-allowed; }
+
+  #main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .screen { display:none; flex-direction:column; height:100%; overflow:hidden; }
+  .screen.active { display:flex; }
+
+  #screen-welcome { align-items:center; justify-content:center; text-align:center; padding:40px; gap:24px; }
+  .welcome-axiom { font-size:64px; font-weight:900; letter-spacing:16px; color:var(--green); text-shadow:0 0 40px var(--green),0 0 80px rgba(0,255,178,0.3); animation:flicker 8s infinite; }
+  @keyframes flicker { 0%,95%,100%{opacity:1} 96%{opacity:0.7} 97%{opacity:1} 98%{opacity:0.5} 99%{opacity:1} }
+  .welcome-sub { font-size:13px; color:var(--muted); letter-spacing:4px; text-transform:uppercase; }
+  .welcome-msg { max-width:540px; font-size:13px; color:var(--text); line-height:1.8; border:1px solid var(--border); padding:24px; border-radius:4px; background:var(--surface); text-align:left; }
+  .welcome-msg .msg-line { margin-bottom:8px; }
+  .welcome-msg .msg-line:last-child { margin-bottom:0; }
+  .highlight { color:var(--green); font-weight:700; }
+  .warn { color:var(--red); font-weight:700; }
+  .amb { color:var(--amber); font-weight:700; }
+  .btn { padding:12px 32px; background:transparent; border:1px solid var(--green); color:var(--green); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:all 0.2s; text-shadow:0 0 8px var(--green); }
+  .btn:hover { background:var(--green-glow); box-shadow:0 0 20px var(--green-glow); }
+  .btn-red { border-color:var(--red); color:var(--red); text-shadow:0 0 8px var(--red); }
+  .btn-red:hover { background:var(--red-glow); box-shadow:0 0 20px var(--red-glow); }
+  .btn-sm { padding:7px 18px; font-size:11px; letter-spacing:2px; }
+
+  #screen-unlock { align-items:center; justify-content:center; padding:40px; gap:20px; }
+  .unlock-box { width:100%; max-width:440px; background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:32px; display:flex; flex-direction:column; gap:20px; }
+  .unlock-title { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+  .unlock-puzzle-name { font-size:22px; font-weight:800; color:var(--white); letter-spacing:1px; }
+  .unlock-desc { font-size:12px; color:var(--muted); line-height:1.7; }
+  .input-group { display:flex; flex-direction:column; gap:8px; }
+  .input-label { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  .code-input { background:var(--bg); border:1px solid var(--border); color:var(--green); font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; letter-spacing:8px; text-align:center; text-transform:uppercase; padding:14px; border-radius:2px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
+  .code-input:focus { border-color:var(--green); box-shadow:0 0 12px var(--green-glow); }
+  .code-input.error { border-color:var(--red); box-shadow:0 0 12px var(--red-glow); animation:shake 0.4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .unlock-error { font-size:11px; color:var(--red); min-height:16px; letter-spacing:1px; }
+
+  #screen-puzzle { flex-direction:row; overflow:hidden; }
+  #briefing-panel { width:400px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; }
+  .briefing-header { padding:20px; border-bottom:1px solid var(--border); background:var(--panel); }
+  .briefing-tag { font-size:9px; letter-spacing:3px; text-transform:uppercase; margin-bottom:8px; color:var(--muted); }
+  .briefing-title { font-size:18px; font-weight:800; color:var(--white); letter-spacing:1px; margin-bottom:4px; }
+  .diff-badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:3px 8px; border-radius:2px; margin-top:6px; }
+  .diff-beginner { background:rgba(0,200,100,0.2); color:#00C864; border:1px solid #00C864; }
+  .diff-intermediate { background:rgba(255,176,32,0.2); color:var(--amber); border:1px solid var(--amber); }
+  .diff-advanced { background:rgba(160,80,255,0.2); color:#B87AFF; border:1px solid #B87AFF; }
+  .briefing-body { padding:20px; display:flex; flex-direction:column; gap:16px; }
+  .brief-section-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .brief-text { font-size:12px; color:var(--text); line-height:1.8; white-space:pre-wrap; }
+  .expected-output { background:var(--bg); border:1px solid var(--border); border-left:3px solid var(--green); padding:12px; border-radius:2px; font-size:12px; color:var(--green-dim); line-height:1.7; white-space:pre; }
+  #hint-box { background:rgba(255,176,32,0.08); border:1px solid var(--amber); border-radius:2px; padding:12px; font-size:12px; color:var(--amber); line-height:1.7; margin-top:10px; display:none; white-space:pre-wrap; }
+  #hint-box.visible { display:block; }
+  #editor-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .editor-toolbar { height:40px; background:var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+  .toolbar-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  .toolbar-actions { display:flex; gap:8px; align-items:center; }
+  #code-editor { flex:1; background:#070C18; color:#C8D8F0; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.7; padding:20px; border:none; outline:none; resize:none; tab-size:4; border-bottom:1px solid var(--border); min-height:0; }
+  #output-area { height:180px; flex-shrink:0; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; }
+  .output-toolbar { height:32px; background:var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+  #output-text { flex:1; padding:12px 20px; font-size:12px; line-height:1.7; overflow-y:auto; white-space:pre-wrap; color:var(--text); }
+  #output-text.success { color:var(--green); }
+  #output-text.error-out { color:var(--red); }
+
+  #success-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; }
+  @keyframes handler-pulse { from{transform:scale(1)} to{transform:scale(1.15)} }
+  #success-overlay.visible { display:flex; }
+  .success-box { background:var(--surface); border:1px solid var(--amber); box-shadow:0 0 60px rgba(255,176,32,0.15); border-radius:4px; padding:48px; max-width:520px; width:90%; text-align:center; display:flex; flex-direction:column; gap:20px; animation:rise 0.4s ease-out; }
+  @keyframes rise { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .success-icon { font-size:48px; }
+  .success-title { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--amber); }
+  .success-system { font-size:24px; font-weight:800; color:var(--white); }
+  .success-fragment-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+  .success-fragment { font-size:40px; font-weight:900; color:var(--green); letter-spacing:12px; text-shadow:0 0 30px var(--green); }
+  .success-note { font-size:11px; color:var(--muted); line-height:1.7; }
+
+  #screen-final { align-items:center; justify-content:center; padding:40px; gap:24px; overflow-y:auto; }
+  .final-box { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:40px; max-width:620px; width:100%; display:flex; flex-direction:column; gap:20px; }
+  .final-locked { text-align:center; display:flex; flex-direction:column; align-items:center; gap:16px; padding:20px; }
+  .final-lock-icon { font-size:48px; opacity:0.4; }
+  .final-locked-msg { font-size:13px; color:var(--muted); line-height:1.7; }
+  .cipher-step { border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .cipher-step-header { background:var(--panel); padding:10px 16px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+  .cipher-step-body { padding:16px; font-size:12px; color:var(--text); line-height:1.8; }
+  .cipher-table { width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; }
+  .cipher-table th { background:var(--panel); color:var(--muted); font-size:10px; letter-spacing:1px; text-align:left; padding:8px 12px; border:1px solid var(--border); }
+  .cipher-table td { padding:8px 12px; border:1px solid var(--border); color:var(--text); }
+  .cipher-table tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+  .cell-green { color:var(--green); font-weight:700; }
+  .final-submit-area { display:flex; flex-direction:column; gap:12px; }
+  .final-input { background:var(--bg); border:1px solid var(--border); color:var(--green); font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:700; letter-spacing:10px; text-align:center; text-transform:uppercase; padding:16px; border-radius:2px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; width:100%; }
+  .final-input:focus { border-color:var(--green); box-shadow:0 0 16px var(--green-glow); }
+
+  #screen-victory { align-items:center; justify-content:center; text-align:center; padding:40px; gap:24px; }
+  .victory-title { font-size:11px; letter-spacing:6px; text-transform:uppercase; color:var(--green); animation:glow-text 2s infinite alternate; }
+  @keyframes glow-text { from{text-shadow:0 0 10px var(--green)} to{text-shadow:0 0 30px var(--green),0 0 60px rgba(0,255,178,0.3)} }
+  .victory-headline { font-size:48px; font-weight:900; color:var(--white); letter-spacing:2px; }
+  .victory-msg { max-width:480px; font-size:13px; color:var(--muted); line-height:1.8; }
+  .victory-time { font-size:36px; font-weight:900; color:var(--green); letter-spacing:4px; }
+  .victory-time-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+
+  #pyodide-loading { position:fixed; bottom:16px; right:16px; background:var(--surface); border:1px solid var(--border); padding:10px 16px; border-radius:4px; font-size:11px; color:var(--muted); display:flex; align-items:center; gap:8px; transition:opacity 0.5s; }
+  .spin { display:inline-block; width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 0.8s linear infinite; flex-shrink:0; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .run-indicator { display:none; align-items:center; gap:6px; font-size:10px; color:var(--green); letter-spacing:1px; }
+  .run-indicator.visible { display:flex; }
+  ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+</style>
+</head>
+<body>
+
+<header id="axiom-header">
+  <div class="header-left">
+    <span class="axiom-logo">AXIOM</span>
+    <span style="color:var(--border)">|</span>
+    <span class="header-subtitle">Ethical Hacker Terminal </span>
+  </div>
+  <div id="status-ticker"><div class="ticker-dot"></div><span id="status-text">SCANNING FOR VULNERABILITIES</span></div>
+  <div class="header-right"><span>OPERATION: REBOOT</span><span id="clock">00:00:00</span></div>
+</header>
+
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-section"><div class="sidebar-label">Systems</div><div id="system-list"></div></div>
+    <div class="sidebar-section"><div class="sidebar-label">Mission Log</div><div id="fragment-log"></div></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Hint Tokens</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Spend a token for a hint. 3 per team.</div>
+      <div class="token-row" id="token-row">
+        <div class="token" id="token-0">💡</div>
+        <div class="token" id="token-1">💡</div>
+        <div class="token" id="token-2">💡</div>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- WELCOME -->
+    <div class="screen active" id="screen-welcome">
+      <div class="welcome-axiom">AXIOM</div>
+      <div class="welcome-sub">University Systems — LOCKDOWN ACTIVE</div>
+      <div class="welcome-msg">
+        <div class="msg-line"><span class="warn">ALERT:</span> A rogue AI called AXIOM has seized control of all university systems.</div>
+        <div class="msg-line">Your team are <span class="highlight">ethical hackers</span>. Your mission: find and fix the bugs in AXIOM's corrupted code modules to restore each system.</div>
+        <div class="msg-line">Each puzzle is <span class="amb">locked</span>. Find the <span class="highlight">access code</span> hidden in the room to unlock it.</div>
+        <div class="msg-line">Fix the code so it produces the correct output, and the system will reveal a <span class="highlight">code fragment</span>. Collect all four to attempt the <span class="warn">Final Cipher</span>.</div>
+        <div class="msg-line" style="margin-top:16px;">When your output matches, <span class="amb">raise your hand</span> for a handler. They will check your code and hand you the fragment card if all looks good.</div>
+        <div class="msg-line" style="margin-top:8px;">You have <span class="warn">2 hours</span>. Good luck.</div>
+      </div>
+      <button class="btn" onclick="startMission()">INITIATE MISSION</button>
+    </div>
+
+    <!-- UNLOCK -->
+    <div class="screen" id="screen-unlock">
+      <div class="unlock-box">
+        <div>
+          <div class="unlock-title">System Access Required</div>
+          <div class="unlock-puzzle-name" id="unlock-puzzle-name">—</div>
+          <div id="unlock-diff-badge"></div>
+        </div>
+        <div class="unlock-desc" id="unlock-desc"></div>
+        <div class="input-group">
+          <div class="input-label">Enter Access Code</div>
+          <input class="code-input" id="code-input" maxlength="10" autocomplete="off" spellcheck="false"
+            placeholder="••••••••" oninput="clearUnlockError()"
+            onkeydown="if(event.key==='Enter') attemptUnlock()">
+          <div class="unlock-error" id="unlock-error"></div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-sm" onclick="attemptUnlock()">UNLOCK SYSTEM</button>
+          <button class="btn btn-sm btn-red" onclick="showWelcome()">CANCEL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUZZLE -->
+    <div class="screen" id="screen-puzzle">
+      <div id="briefing-panel">
+        <div class="briefing-header">
+          <div class="briefing-tag" id="brief-tag"></div>
+          <div class="briefing-title" id="brief-title"></div>
+          <div id="brief-diff-badge"></div>
+        </div>
+        <div class="briefing-body">
+          <div>
+            <div class="brief-section-label">Situation Report</div>
+            <div class="brief-text" id="brief-situation"></div>
+          </div>
+          <div>
+            <div class="brief-section-label">Expected Output</div>
+            <div class="expected-output" id="brief-expected"></div>
+          </div>
+          <div>
+            <div class="brief-section-label">Bugs to Find</div>
+            <div class="brief-text" id="brief-bugs"></div>
+          </div>
+          <div>
+            <button class="btn btn-sm" style="border-color:var(--amber);color:var(--amber);" onclick="spendHint()">💡 USE HINT TOKEN</button>
+            <div id="hint-box"></div>
+          </div>
+          <div><button class="btn btn-sm btn-red" onclick="showWelcome()">← BACK TO SYSTEMS</button></div>
+        </div>
+      </div>
+      <div id="editor-area">
+        <div class="editor-toolbar">
+          <span class="toolbar-label" id="editor-filename">module.py</span>
+          <div class="toolbar-actions">
+            <div class="run-indicator" id="run-indicator"><div class="spin"></div> EXECUTING</div>
+            <button class="btn btn-sm" onclick="runCode()">▶ RUN CODE</button>
+          </div>
+        </div>
+        <textarea id="code-editor" spellcheck="false"></textarea>
+        <div id="output-area">
+          <div class="output-toolbar">
+            <span class="toolbar-label">Output</span>
+            <button class="btn btn-sm" style="font-size:10px;padding:4px 12px;" onclick="clearOutput()">CLEAR</button>
+          </div>
+          <div id="output-text">// Run your code to see output here</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINAL CIPHER -->
+    <div class="screen" id="screen-final">
+      <div class="final-box" id="final-box-content"></div>
+    </div>
+
+    <!-- VICTORY -->
+    <div class="screen" id="screen-victory">
+      <div class="victory-title">AXIOM NEUTRALISED — MISSION COMPLETE</div>
+      <div class="victory-headline">SYSTEMS RESTORED</div>
+      <div class="victory-msg">All four systems have been repaired. The master override key has been accepted. AXIOM is offline. The university is secure.</div>
+      <div><div class="victory-time-label">Time Elapsed</div><div class="victory-time" id="victory-time">—</div></div>
+      <button class="btn" onclick="location.reload()">RUN AGAIN</button>
+    </div>
+  </main>
+</div>
+
+<!-- HANDLER OVERLAY — shown when output is correct, staff must verify before fragment is given -->
+<div id="success-overlay">
+  <div class="success-box">
+    <div class="success-icon" style="animation:handler-pulse 1s infinite alternate">📡</div>
+    <div class="success-title">Output Verified — Awaiting Handler</div>
+    <div class="success-system" id="success-system-name"></div>
+    <div style="background:var(--panel);border:1px solid var(--amber);border-radius:4px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--amber)">Action Required</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.8;">Your code output is correct. <strong style="color:var(--amber)">Raise your hand and wait for a handler.</strong><br><br>The handler will check your code, then give you the code fragment on a card. Write it on your Mission Log.</div>
+    </div>
+    <div class="success-note" id="success-note"></div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button class="btn" onclick="closeSuccess()">FRAGMENT RECEIVED — CONTINUE</button>
+    </div>
+  </div>
+</div>
+
+<div id="pyodide-loading"><div class="spin"></div><span>Loading Python runtime...</span></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+<script>
+
+
+const PUZZLES = [
+  {
+    id: 'greeting',
+    name: 'The Greeting Protocol',
+    system: 'Communications Array',
+    difficulty: 'beginner',
+    filename: 'comms_array.py',
+    tag: 'PUZZLE 1 OF 4',
+    accessCodeHash: '79182cdeea49c82f3d64f1c55567cecce87ad0e6cb08d35d6eb39a107879be8b',
+    situation: 'AXIOM has corrupted the communications array. The protocol crashed after deliberate syntax errors were introduced — the program will not run at all.\n\nRestore it. The corrected program should greet five agents by name, then print a status line.',
+    expectedOutput: 'Hello, Agent Maya!\nHello, Agent Jordan!\nHello, Agent Sam!\nHello, Agent Riley!\nHello, Agent Quinn!\n--- 5 agents acknowledged. ONLINE. ---',
+    bugsNote: 'There are 2 bugs to find.\n\u2022 One prevents the program from running at all\n\u2022 One causes a crash even after the first is fixed',
+    hint: 'Bug 1: The for loop line is missing a colon at the end. Every loop header must end with :\nBug 2: You cannot join an integer directly with a string using +. The count variable is an integer — wrap it with str() first, or rewrite using an f-string.',
+    code: `# AXIOM Communications Array v2.1
+# STATUS: CORRUPTED — FIX ME
+
+agents = ['Maya', 'Jordan', 'Sam', 'Riley', 'Quinn']
+
+for agent in agents
+    print('Hello, Agent ' + agent + '!')
+
+count = len(agents)
+print('--- ' + count + ' agents acknowledged. ONLINE. ---')`,
+  },
+
+  {
+    id: 'security',
+    name: 'The Security Door',
+    system: 'Physical Security',
+    difficulty: 'intermediate',
+    filename: 'door_control.py',
+    tag: 'PUZZLE 2 OF 4',
+    accessCodeHash: '53d2dd2504402eec1bc49ad74daf2e90c352f399842f3d5a3606892213c110fc',
+    situation: 'AXIOM has flipped the logic on the security door system. Restricted rooms let anyone in and safe rooms stay locked. The program runs without errors — the bug is in the logic, not the syntax.\n\nFix the access control function so agents with sufficient clearance are granted access.',
+    expectedOutput: 'Agent Fox (Level 5) -> ACCESS GRANTED\nAgent Vex (Level 2) -> ACCESS DENIED\nAgent Tash (Level 3) -> ACCESS GRANTED',
+    bugsNote: 'There is 1 bug to find.\n\u2022 The program runs fine but gives the wrong result every time\n\u2022 Look carefully at the comparison operator — is it checking the right condition?',
+    hint: 'The comparison operator is the wrong way around. To GRANT access when clearance is sufficient, you need >= not <. Swap the operator and the logic flips correctly.',
+    code: `# AXIOM Door Control System
+# STATUS: LOGIC CORRUPTED — FIX ME
+
+def check_access(clearance, required_level):
+    if clearance < required_level:
+        return 'ACCESS GRANTED'
+    else:
+        return 'ACCESS DENIED'
+
+agents = [('Agent Fox', 5, 5), ('Agent Vex', 2, 5), ('Agent Tash', 3, 3)]
+
+for name, clearance, required in agents:
+    result = check_access(clearance, required)
+    print(f'{name} (Level {clearance}) -> {result}')`,
+  },
+
+  {
+  id: 'database',
+  name: 'The Temperature Converter',
+  system: 'Climate Control',
+  difficulty: 'intermediate',
+  filename: 'climate_control.py',
+  tag: 'PUZZLE 3 OF 4',
+  accessCodeHash: 'b50e9877a918e60a7ada0a5517609e82aeba506399357e87a0a023b723d84d12',
+  situation: "AXIOM has wiped the Celsius-to-Fahrenheit conversion formula from the codebase.\n\nIntelligence has recovered the original algorithm in plain English:\n\n  1. Multiply the Celsius value by nine\n  2. Divide the result by five\n  3. Add thirty-two\n\nTranslate the English algorithm into correct Python.",
+  expectedOutput: '0C -> 32.0F\n20C -> 68.0F\n37C -> 98.6F\n100C -> 212.0F\nConversion complete. Systems ONLINE.',
+  bugsNote: 'There are no bugs, just a deleted formula.\n\u2022 Look at the steps needed to convert Celsius to Fahrenheit\n\u2022 What would these steps look like as a formula?\n\u2022 You do not need to change anything apart from the return line',
+  hint: 'The English says "multiply the Celsius value by nine" — multiplication is done with the * operator. Division is done with the / operator, and addition is +. You will need to use the "c" variable too!',
+  code: `# AXIOM Climate Control System
+# STATUS: FORMULA CORRUPTED — FIX ME
+
+def celsius_to_fahrenheit(c):
+    return [DELETED]
+
+temps = [0, 20, 37, 100]
+for t in temps:
+    print(f'{t}C -> {celsius_to_fahrenheit(t):.1f}F')
+print('Conversion complete. Systems ONLINE.')`,
+},
+
+
+
+  {
+    id: 'vault',
+    name: 'The Fibonacci Vault',
+    system: 'AXIOM Secure Vault',
+    difficulty: 'advanced',
+    filename: 'fibonacci_vault.py',
+    tag: 'PUZZLE 4 OF 4',
+    accessCodeHash: 'f48280c0107726b99afcbd3cd0a46a2bac5f1ddb44e8768f232ac4da562eb166',
+    situation: "AXIOM's most secure system is locked behind a Fibonacci sequence. Each number is the sum of the two before it, starting from 0 and 1:\n\n0, 1, 1, 2, 3, 5, 8, 13, 21, 34...\n\nThe generator has three bugs. Fix all three.",
+    expectedOutput: 'AXIOM VAULT SEQUENCE: 0 1 1 2 3 5 8 13 21 34',
+    bugsNote: 'There are three bugs to fix here!',
+    hint: 'Bug 1: sequence = [0, 2] should be [0, 1] — the second seed value is wrong.\nBug 2: range(2, n) should be range(2, n+1) — Python excludes the upper bound, so the sequence is one item short.\nBug 3: \'-\'.join(sequence) crashes because join() needs strings, not integers. Fix: \' \'.join(str(x) for x in sequence)',
+    code: `# AXIOM Fibonacci Vault Generator
+# STATUS: THREE BUGS — FIX ME
+
+def fibonacci_vault(n):
+    sequence = [0, 2]
+    for i in range(2, n+1):
+        next_num = sequence[i-1] + sequence[i-1]
+        sequence.append(next_num)
+    return '-'.join(str(x) for x in sequence)
+
+result = fibonacci_vault(10)
+print("AXIOM VAULT SEQUENCE: " + result)`,
+  },
+];
+
+const CIPHER = {
+  steps: [
+    { fragment:'',  word:''},
+    { fragment:'',  word:''},
+    { fragment:'', word:''},
+    { fragment:'',  word:''},
+  ],
+  // SHA-256('VGEF')
+  answerHash: '6c43892762249a066aff0f5965c46073c6304cad5b5a3deab90dae0336d41309',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HASHING  (Web Crypto API)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const state = {
+  currentPuzzle:    null,
+  completedPuzzles: new Set(),
+  fragments:        {},     // plain text, in memory only
+  hintTokens:       3,
+  startTime:        null,
+  timerInterval:    null,
+  pyodide:          null,
+  pyodideReady:     false,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PYODIDE
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function loadPyodide_() {
+  try {
+    state.pyodide = await loadPyodide({ indexURL:'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
+    state.pyodideReady = true;
+    const el = document.getElementById('pyodide-loading');
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 500);
+  } catch(e) {
+    document.getElementById('pyodide-loading').innerHTML =
+      '<span style="color:var(--red)">⚠ Python runtime failed to load. Check your connection.</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════════════════════════
+
+function buildSidebar() {
+  const list = document.getElementById('system-list');
+  list.innerHTML = '';
+  PUZZLES.forEach(p => {
+    const done = state.completedPuzzles.has(p.id);
+    const div = document.createElement('div');
+    div.className = 'system-item' + (done ? ' completed' : '');
+    div.innerHTML = `<span class="sys-icon">${done ? '✅' : '🔒'}</span>
+      <div><div class="sys-name">${p.name}</div><div class="sys-diff">${p.difficulty.toUpperCase()}</div></div>`;
+    div.onclick = () => openUnlock(p.id);
+    list.appendChild(div);
+  });
+
+  const allDone = PUZZLES.every(p => state.completedPuzzles.has(p.id));
+  const fd = document.createElement('div');
+  fd.className = 'system-item' + (!allDone ? ' locked' : '');
+  fd.innerHTML = `<span class="sys-icon">${allDone ? '⚔️' : '⛔'}</span>
+    <div><div class="sys-name">Final Cipher</div><div class="sys-diff">SEALED</div></div>
+    ${!allDone ? '<span class="lock-icon">🔒</span>' : ''}`;
+  fd.onclick = () => { if (allDone) showFinalCipher(); };
+  list.appendChild(fd);
+
+  const log = document.getElementById('fragment-log');
+  log.innerHTML = '';
+  PUZZLES.forEach(p => {
+    const done = state.completedPuzzles.has(p.id);
+    const div = document.createElement('div');
+    div.className = 'fragment-slot';
+    // Show a padlock when not done, a waiting indicator when done but not yet confirmed by staff
+    div.innerHTML = `<span class="fragment-label">${p.system.split(' ')[0]}</span>
+      <span class="fragment-value ${done ? '' : 'empty'}" style="${done ? 'color:var(--amber);font-size:10px;letter-spacing:1px;' : ''}">${done ? 'FROM HANDLER' : '————'}</span>`;
+    log.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function setStatus(text, mode) {
+  document.getElementById('status-ticker').className = mode || '';
+  document.getElementById('status-text').textContent = text;
+}
+function showWelcome() {
+  setStatus('SCANNING FOR VULNERABILITIES', '');
+  showScreen('welcome');
+  state.currentPuzzle = null;
+}
+function startMission() {
+  state.startTime = Date.now();
+  state.timerInterval = setInterval(updateClock, 1000);
+  buildSidebar();
+  showWelcome();
+}
+function updateClock() {
+  if (!state.startTime) return;
+  const e = Math.floor((Date.now() - state.startTime) / 1000);
+  document.getElementById('clock').textContent =
+    [Math.floor(e/3600), Math.floor((e%3600)/60), e%60]
+      .map(n => String(n).padStart(2,'0')).join(':');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UNLOCK
+// ═══════════════════════════════════════════════════════════════════════════
+
+function openUnlock(puzzleId) {
+  const puzzle = PUZZLES.find(p => p.id === puzzleId);
+  if (!puzzle) return;
+  if (state.completedPuzzles.has(puzzleId)) { loadPuzzle(puzzleId); return; }
+  state.currentPuzzle = puzzleId;
+  document.getElementById('unlock-puzzle-name').textContent = puzzle.name;
+  document.getElementById('unlock-desc').textContent =
+    `Find the access code for "${puzzle.system}" hidden in the room, then enter it below.`;
+  document.getElementById('unlock-diff-badge').innerHTML =
+    `<span class="diff-badge diff-${puzzle.difficulty}">${puzzle.difficulty.toUpperCase()}</span>`;
+  document.getElementById('code-input').value = '';
+  document.getElementById('unlock-error').textContent = '';
+  document.getElementById('code-input').classList.remove('error');
+  setStatus('AWAITING SYSTEM ACCESS CODE', '');
+  showScreen('unlock');
+  setTimeout(() => document.getElementById('code-input').focus(), 100);
+}
+
+function clearUnlockError() {
+  document.getElementById('unlock-error').textContent = '';
+  document.getElementById('code-input').classList.remove('error');
+}
+
+async function attemptUnlock() {
+  const raw = document.getElementById('code-input').value.trim().toUpperCase();
+  const puzzle = PUZZLES.find(p => p.id === state.currentPuzzle);
+  if (!puzzle || !raw) return;
+  if (await sha256(raw) === puzzle.accessCodeHash) {
+    loadPuzzle(puzzle.id);
+  } else {
+    document.getElementById('code-input').classList.add('error');
+    document.getElementById('unlock-error').textContent = '⚠ ACCESS DENIED — Invalid code';
+    setStatus('BREACH ATTEMPT DETECTED', 'breach');
+    setTimeout(() => {
+      document.getElementById('code-input').classList.remove('error');
+      setStatus('AWAITING SYSTEM ACCESS CODE', '');
+    }, 1500);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PUZZLE LOADING  — generates a fresh seed each time
+// ═══════════════════════════════════════════════════════════════════════════
+
+function loadPuzzle(puzzleId) {
+  const puzzle = PUZZLES.find(p => p.id === puzzleId);
+  if (!puzzle) return;
+  state.currentPuzzle = puzzleId;
+
+  document.getElementById('brief-tag').textContent      = puzzle.tag;
+  document.getElementById('brief-title').textContent    = puzzle.name;
+  document.getElementById('brief-diff-badge').innerHTML =
+    `<span class="diff-badge diff-${puzzle.difficulty}">${puzzle.difficulty.toUpperCase()} — ${puzzle.system}</span>`;
+  document.getElementById('brief-situation').textContent = puzzle.situation;
+  document.getElementById('brief-expected').textContent  = puzzle.expectedOutput;
+  document.getElementById('brief-bugs').textContent      = puzzle.bugsNote;
+  document.getElementById('editor-filename').textContent = puzzle.filename;
+  document.getElementById('code-editor').value           = puzzle.code;
+  document.getElementById('hint-box').textContent        = '';
+  document.getElementById('hint-box').classList.remove('visible');
+  clearOutput();
+  setStatus(`BREACHING — ${puzzle.system.toUpperCase()}`, '');
+  showScreen('puzzle');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CODE EXECUTION
+//  Computes expected output fresh from seed, then hashes both for comparison.
+//  Plain-text expected output is never stored statically.
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function runCode() {
+  if (!state.pyodideReady) {
+    setOutput('Python runtime is still loading. Please wait a moment.', 'error-out');
+    return;
+  }
+  const puzzle = PUZZLES.find(p => p.id === state.currentPuzzle);
+  if (!puzzle) return;
+
+  const code = document.getElementById('code-editor').value;
+  document.getElementById('run-indicator').classList.add('visible');
+  setOutput('Running...', '');
+  setStatus(`EXECUTING — ${puzzle.system.toUpperCase()}`, '');
+
+  try {
+    await state.pyodide.runPythonAsync(
+      `import sys,io\nsys.stdout=io.StringIO()\nsys.stderr=io.StringIO()`);
+
+    let errorMsg = null;
+    try { await state.pyodide.runPythonAsync(code); }
+    catch(e) { errorMsg = e.message || String(e); }
+
+    const stdout = await state.pyodide.runPythonAsync('sys.stdout.getvalue()');
+    const stderr = await state.pyodide.runPythonAsync('sys.stderr.getvalue()');
+    await state.pyodide.runPythonAsync(
+      `sys.stdout=sys.__stdout__\nsys.stderr=sys.__stderr__`);
+
+    document.getElementById('run-indicator').classList.remove('visible');
+
+    if (errorMsg) {
+      setOutput(stderr || errorMsg, 'error-out');
+      setStatus('ERROR DETECTED — CHECK OUTPUT', 'breach');
+      setTimeout(() => setStatus(`BREACHING — ${puzzle.system.toUpperCase()}`, ''), 2500);
+      return;
+    }
+
+    const output   = (stdout || '').trimEnd();
+    setOutput(output, '');
+
+    const outputHash   = await sha256(output);
+    const expectedHash = await sha256(puzzle.expectedOutput.trimEnd());
+
+    if (outputHash === expectedHash) {
+      setOutput(output, 'success');
+      setStatus('SYSTEM RESTORED', 'restored');
+      state.completedPuzzles.add(puzzle.id);
+      buildSidebar();
+      showSuccess(puzzle);
+    } else {
+      setStatus('OUTPUT MISMATCH — KEEP DEBUGGING', 'breach');
+      setTimeout(() => setStatus(`BREACHING — ${puzzle.system.toUpperCase()}`, ''), 2500);
+    }
+  } catch(e) {
+    document.getElementById('run-indicator').classList.remove('visible');
+    setOutput('Unexpected error: ' + String(e), 'error-out');
+    setStatus('RUNTIME ERROR', 'breach');
+    setTimeout(() => setStatus(`BREACHING — ${puzzle.system.toUpperCase()}`, ''), 2500);
+  }
+}
+
+function setOutput(text, cls) {
+  const el = document.getElementById('output-text');
+  el.textContent = text; el.className = cls || '';
+}
+function clearOutput() { setOutput('// Run your code to see output here', ''); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HINTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function spendHint() {
+  if (state.hintTokens <= 0) { alert('No hint tokens remaining!'); return; }
+  const puzzle = PUZZLES.find(p => p.id === state.currentPuzzle);
+  if (!puzzle) return;
+  document.getElementById('token-' + (3 - state.hintTokens)).classList.add('spent');
+  state.hintTokens--;
+  const box = document.getElementById('hint-box');
+  box.textContent = puzzle.hint;
+  box.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SUCCESS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function showSuccess(puzzle) {
+  document.getElementById('success-system-name').textContent = puzzle.system + ' — OUTPUT CORRECT';
+  const remaining = PUZZLES.length - state.completedPuzzles.size;
+  document.getElementById('success-note').textContent = remaining > 0
+    ? `${remaining} system${remaining>1?' systems':' system'} still to restore after this one.`
+    : 'This is the last system. Once your handler verifies, the Final Cipher will unlock.';
+  document.getElementById('success-overlay').classList.add('visible');
+  setStatus('HANDLER REQUIRED — RAISE YOUR HAND', 'restored');
+}
+
+function closeSuccess() {
+  document.getElementById('success-overlay').classList.remove('visible');
+  if (PUZZLES.every(p => state.completedPuzzles.has(p.id))) showFinalCipher();
+  else showWelcome();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FINAL CIPHER
+// ═══════════════════════════════════════════════════════════════════════════
+
+function showFinalCipher() {
+  const allDone = PUZZLES.every(p => state.completedPuzzles.has(p.id));
+  const box = document.getElementById('final-box-content');
+
+  if (!allDone) {
+    const remaining = PUZZLES.filter(p => !state.completedPuzzles.has(p.id)).map(p => p.name);
+    box.innerHTML = `<div class="final-locked">
+      <div class="final-lock-icon">⛔</div>
+      <div class="briefing-title" style="color:var(--red)">CIPHER LOCKED</div>
+      <div class="final-locked-msg">You need all four code fragments before the cipher can be attempted.<br><br>
+        Still to restore:<br>${remaining.map(n=>'• '+n).join('<br>')}</div>
+      <button class="btn btn-sm btn-red" onclick="showWelcome()">← RETURN TO SYSTEMS</button></div>`;
+  } else {
+    const fragments = CIPHER.steps.map(s => s.fragment);
+    const fragList  = fragments.map(f => `<span class="cell-green" style="font-size:20px;font-weight:800;letter-spacing:3px;">${f}</span>`).join('&nbsp;&nbsp;&nbsp;');
+    box.innerHTML = `
+      <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Final Cipher</div>
+      <div style="font-size:22px;font-weight:800;color:var(--white)">The Master Override</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;">Work through the three steps below on paper using your four code fragments. Enter the final key when you have it.</div>
+
+
+      <div class="cipher-step">
+        <div class="cipher-step-header">Step 1 — Extract one letter from each fragment</div>
+        <div class="cipher-step-body">From each fragment word, take the letter at the position equal to its number.<br><br>
+        <span style="color:var(--muted);font-size:11px;">Example: if your fragment says "5: Toucan", take the 5th letter of Toucan, which is "a". 
+          Or if your fragment says "2. Pheasant", take the 2nd letter of Pheasant, which is "h"</span></div>
+      </div>
+
+      <div class="cipher-step">
+        <div class="cipher-step-header">Step 2 — Shift each letter backwards through the alphabet</div>
+        <div class="cipher-step-body">Take each letter from Step 1 and shift it backwards through the alphabet by the number of letters in its fragment word.<br><br>
+        <span style="color:var(--muted);font-size:11px;">Example: your letter is "K" in "DUCK". "DUCK" is 4 letters long, so shifting K back by 4 gives G (K->J->I->H->G). 
+        The alphabet wraps too — shifting A back by 1 gives Z.</span></div>
+      </div>
+
+      <div class="cipher-step">
+        <div class="cipher-step-header">Step 3 — Reverse the result</div>
+        <div class="cipher-step-body">Take your four result letters in order and reverse the sequence. This is your master override key.</div>
+      </div>
+
+      <div class="final-submit-area">
+        <div class="input-label">Enter Master Override Key</div>
+        <input class="final-input" id="final-input" maxlength="4" autocomplete="off" spellcheck="false"
+          placeholder="——" onkeydown="if(event.key==='Enter') submitOverride()">
+        <div id="final-error" style="font-size:11px;color:var(--red);min-height:16px;"></div>
+        <button class="btn" onclick="submitOverride()">SUBMIT OVERRIDE KEY</button>
+      </div>`;
+  }
+  setStatus('FINAL CIPHER — DECODE THE OVERRIDE KEY', '');
+  showScreen('final');
+}
+
+async function submitOverride() {
+  const raw = (document.getElementById('final-input').value||'').trim().toUpperCase();
+  if (await sha256(raw) === CIPHER.answerHash) {
+    showVictory();
+  } else {
+    document.getElementById('final-error').textContent = '⚠ INCORRECT KEY — Re-check your working';
+    setStatus('OVERRIDE REJECTED', 'breach');
+    setTimeout(() => {
+      setStatus('FINAL CIPHER — DECODE THE OVERRIDE KEY', '');
+      document.getElementById('final-error').textContent = '';
+    }, 2000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  VICTORY
+// ═══════════════════════════════════════════════════════════════════════════
+
+function showVictory() {
+  const e = state.startTime ? Math.floor((Date.now()-state.startTime)/1000) : 0;
+  document.getElementById('victory-time').textContent =
+    [Math.floor(e/3600),Math.floor((e%3600)/60),e%60].map(n=>String(n).padStart(2,'0')).join(':');
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  setStatus('AXIOM OFFLINE — MISSION COMPLETE', 'restored');
+  showScreen('victory');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('keydown', e => {
+  if ((e.key==='F5'||(e.ctrlKey&&e.key==='Enter')) &&
+      document.getElementById('screen-puzzle').classList.contains('active')) {
+    e.preventDefault(); runCode();
+  }
+});
+
+loadPyodide_();
+</script>
+</body>
+</html>
