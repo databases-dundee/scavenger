@@ -326,8 +326,8 @@ const PUZZLES = [
     system: 'Communications Array',
     difficulty: 'beginner',
     filename: 'comms_array.py',
-    tag: 'PUZZLE 1 OF 4',
-    accessCodeHash: '79182cdeea49c82f3d64f1c55567cecce87ad0e6cb08d35d6eb39a107879be8b',
+    tag: 'PUZZLE 1 OF 3',
+    accessCodeHash: '51e1424eeb514560081905811593feb19b6594c1e79146eae6fff3bed87a3e5a',
     situation: 'AXIOM has corrupted the communications array. The protocol crashed after deliberate syntax errors were introduced — the program will not run at all.\n\nRestore it. The corrected program should greet five agents by name, then print a status line.',
     expectedOutput: 'Hello, Agent Maya!\nHello, Agent Jordan!\nHello, Agent Sam!\nHello, Agent Riley!\nHello, Agent Quinn!\n--- 5 agents acknowledged. ONLINE. ---',
     bugsNote: 'There are 2 bugs to find.\n\u2022 One prevents the program from running at all\n\u2022 One causes a crash even after the first is fixed',
@@ -350,8 +350,8 @@ print('--- ' + count + ' agents acknowledged. ONLINE. ---')`,
     system: 'Physical Security',
     difficulty: 'intermediate',
     filename: 'door_control.py',
-    tag: 'PUZZLE 2 OF 4',
-    accessCodeHash: '53d2dd2504402eec1bc49ad74daf2e90c352f399842f3d5a3606892213c110fc',
+    tag: 'PUZZLE 2 OF 3',
+    accessCodeHash: '404c93bdee16f75b1fa65f8e52993cc7f0b0bf7b5314afc1729736f8bf94d30c',
     situation: 'AXIOM has flipped the logic on the security door system. Restricted rooms let anyone in and safe rooms stay locked. The program runs without errors — the bug is in the logic, not the syntax.\n\nFix the access control function so agents with sufficient clearance are granted access.',
     expectedOutput: 'Agent Fox (Level 5) -> ACCESS GRANTED\nAgent Vex (Level 2) -> ACCESS DENIED\nAgent Tash (Level 3) -> ACCESS GRANTED',
     bugsNote: 'There is 1 bug to find.\n\u2022 The program runs fine but gives the wrong result every time\n\u2022 Look carefully at the comparison operator — is it checking the right condition?',
@@ -378,7 +378,7 @@ for name, clearance, required in agents:
   system: 'Climate Control',
   difficulty: 'intermediate',
   filename: 'climate_control.py',
-  tag: 'PUZZLE 3 OF 4',
+  tag: 'PUZZLE 3 OF ',
   accessCodeHash: 'b50e9877a918e60a7ada0a5517609e82aeba506399357e87a0a023b723d84d12',
   situation: "AXIOM has wiped the Celsius-to-Fahrenheit conversion formula from the codebase.\n\nIntelligence has recovered the original algorithm in plain English:\n\n  1. Multiply the Celsius value by nine\n  2. Divide the result by five\n  3. Add thirty-two\n\nTranslate the English algorithm into correct Python.",
   expectedOutput: '0C -> 32.0F\n20C -> 68.0F\n37C -> 98.6F\n100C -> 212.0F\nConversion complete. Systems ONLINE.',
@@ -394,35 +394,7 @@ temps = [0, 20, 37, 100]
 for t in temps:
     print(f'{t}C -> {celsius_to_fahrenheit(t):.1f}F')
 print('Conversion complete. Systems ONLINE.')`,
-},
-
-
-
-  {
-    id: 'vault',
-    name: 'The Fibonacci Vault',
-    system: 'AXIOM Secure Vault',
-    difficulty: 'advanced',
-    filename: 'fibonacci_vault.py',
-    tag: 'PUZZLE 4 OF 4',
-    accessCodeHash: 'f48280c0107726b99afcbd3cd0a46a2bac5f1ddb44e8768f232ac4da562eb166',
-    situation: "AXIOM's most secure system is locked behind a Fibonacci sequence. Each number is the sum of the two before it, starting from 0 and 1:\n\n0, 1, 1, 2, 3, 5, 8, 13, 21, 34...\n\nThe generator has three bugs. Fix all three.",
-    expectedOutput: 'AXIOM VAULT SEQUENCE: 0 1 1 2 3 5 8 13 21 34',
-    bugsNote: 'There are three bugs to fix here!',
-    hint: 'Bug 1: sequence = [0, 2] should be [0, 1] — the second seed value is wrong.\nBug 2: range(2, n) should be range(2, n+1) — Python excludes the upper bound, so the sequence is one item short.\nBug 3: \'-\'.join(sequence) crashes because join() needs strings, not integers. Fix: \' \'.join(str(x) for x in sequence)',
-    code: `# AXIOM Fibonacci Vault Generator
-# STATUS: THREE BUGS — FIX ME
-
-def fibonacci_vault(n):
-    sequence = [0, 2]
-    for i in range(2, n+1):
-        next_num = sequence[i-1] + sequence[i-1]
-        sequence.append(next_num)
-    return '-'.join(str(x) for x in sequence)
-
-result = fibonacci_vault(10)
-print("AXIOM VAULT SEQUENCE: " + result)`,
-  },
+}
 ];
 
 const CIPHER = {
