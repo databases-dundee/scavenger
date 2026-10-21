@@ -331,8 +331,7 @@ const PUZZLES = [
     situation: 'AXIOM has corrupted the communications array. The protocol crashed after deliberate syntax errors were introduced — the program will not run at all.\n\nRestore it. The corrected program should greet five agents by name, then print a status line.',
     expectedOutput: 'Hello, Agent Maya!\nHello, Agent Jordan!\nHello, Agent Sam!\nHello, Agent Riley!\nHello, Agent Quinn!\n--- 5 agents acknowledged. ONLINE. ---',
     bugsNote: 'There are 2 bugs to find.\n\u2022 One prevents the program from running at all\n\u2022 One causes a crash even after the first is fixed',
-    hint: 'Bug 1: The for loop line is missing a colon at the end. Every loop header must end with :\nBug 2: You cannot join an integer directly with a string using +. The count variable is an integer — wrap it with str() first, or rewrite using an f-string.',
-    code: `# AXIOM Communications Array v2.1
+    hint: 'There are two bugs to fix, one at a time.\n\nBug 1: Look at line 6 — the line that starts with "for". In Python, lines that start a loop or a function must end with a colon (:). Add one at the end of that line.\n\nOnce you\'ve done that, run the code again. You\'ll get a new error.\n\nBug 2: The last print line tries to join count (a number) with text using +. Python won\'t let you do this directly. Wrap count in str() to convert it to text first, like this:\n\nstr(count)',    code: `# AXIOM Communications Array v2.1
 # STATUS: CORRUPTED — FIX ME
 
 agents = ['Maya', 'Jordan', 'Sam', 'Riley', 'Quinn']
@@ -355,8 +354,7 @@ print('--- ' + count + ' agents acknowledged. ONLINE. ---')`,
     situation: 'AXIOM has flipped the logic on the security door system. Restricted rooms let anyone in and safe rooms stay locked. The program runs without errors — the bug is in the logic, not the syntax.\n\nFix the access control function so agents with sufficient clearance are granted access.',
     expectedOutput: 'Agent Fox (Level 5) -> ACCESS GRANTED\nAgent Vex (Level 2) -> ACCESS DENIED\nAgent Tash (Level 3) -> ACCESS GRANTED',
     bugsNote: 'There is 1 bug to find.\n\u2022 The program runs fine but gives the wrong result every time\n\u2022 Look carefully at the comparison operator — is it checking the right condition?',
-    hint: 'The comparison operator is the wrong way around. To GRANT access when clearance is sufficient, you need >= not <. Swap the operator and the logic flips correctly.',
-    code: `# AXIOM Door Control System
+    hint: 'The bug is on the line that says "if clearance < required_level".\n\nRead it aloud: "if clearance is less than required level, grant access." Does that make sense? You should only grant access if clearance is HIGH ENOUGH — meaning greater than or equal to the required level.\n\nChange the < symbol to >= and run the code again.\n\nIn Python:\n  <  means "less than"\n  >= means "greater than or equal to"',    code: `# AXIOM Door Control System
 # STATUS: LOGIC CORRUPTED — FIX ME
 
 def check_access(clearance, required_level):
@@ -383,8 +381,7 @@ for name, clearance, required in agents:
   situation: "AXIOM has wiped the Celsius-to-Fahrenheit conversion formula from the codebase.\n\nIntelligence has recovered the original algorithm in plain English:\n\n  1. Multiply the Celsius value by nine\n  2. Divide the result by five\n  3. Add thirty-two\n\nTranslate the English algorithm into correct Python.",
   expectedOutput: '0C -> 32.0F\n20C -> 68.0F\n37C -> 98.6F\n100C -> 212.0F\nConversion complete. Systems ONLINE.',
   bugsNote: 'There are no bugs, just a deleted formula.\n\u2022 Look at the steps needed to convert Celsius to Fahrenheit\n\u2022 What would these steps look like as a formula?\n\u2022 You do not need to change anything apart from the return line',
-  hint: 'The English says "multiply the Celsius value by nine" — multiplication is done with the * operator. Division is done with the / operator, and addition is +. You will need to use the "c" variable too!',
-  code: `# AXIOM Climate Control System
+  hint: 'The bug is on the line inside the function that starts with "return".\n\nThe English instructions say "multiply the Celsius value by nine" — but look at the operator between c and 9 in the code. Is it multiplying, or doing something else?\n\nIn Python:\n  + means add\n  * means multiply\n\nChange the operator so it multiplies, then run the code again.',  code: `# AXIOM Climate Control System
 # STATUS: FORMULA CORRUPTED — FIX ME
 
 def celsius_to_fahrenheit(c):
