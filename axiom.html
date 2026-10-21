@@ -205,7 +205,7 @@
         <div class="msg-line">Each puzzle is <span class="amb">locked</span>. Find the <span class="highlight">access code</span> hidden in the room to unlock it.</div>
         <div class="msg-line">Fix the code so it produces the correct output, and the system will reveal a <span class="highlight">code fragment</span>. Collect all four to attempt the <span class="warn">Final Cipher</span>.</div>
         <div class="msg-line" style="margin-top:16px;">When your output matches, <span class="amb">raise your hand</span> for a handler. They will check your code and hand you the fragment card if all looks good.</div>
-        <div class="msg-line" style="margin-top:8px;">You have <span class="warn">2 hours</span>. Good luck.</div>
+        <div class="msg-line" style="margin-top:8px;">You have <span class="warn">45 minutes</span>. Good luck.</div>
       </div>
       <button class="btn" onclick="startMission()">INITIATE MISSION</button>
     </div>
@@ -304,7 +304,7 @@
     <div class="success-system" id="success-system-name"></div>
     <div style="background:var(--panel);border:1px solid var(--amber);border-radius:4px;padding:20px;display:flex;flex-direction:column;gap:10px;">
       <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--amber)">Action Required</div>
-      <div style="font-size:13px;color:var(--text);line-height:1.8;">Your code output is correct. <strong style="color:var(--amber)">Raise your hand and wait for a handler.</strong><br><br>The handler will check your code, then give you the code fragment on a card. Write it on your Mission Log.</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.8;">Your code output is correct.<br><br>Daniel will check your code, then give you the password.</div>
     </div>
     <div class="success-note" id="success-note"></div>
     <div style="display:flex;gap:12px;justify-content:center;">
@@ -381,7 +381,7 @@ for name, clearance, required in agents:
   situation: "AXIOM has wiped the Celsius-to-Fahrenheit conversion formula from the codebase.\n\nIntelligence has recovered the original algorithm in plain English:\n\n  1. Multiply the Celsius value by nine\n  2. Divide the result by five\n  3. Add thirty-two\n\nTranslate the English algorithm into correct Python.",
   expectedOutput: '0C -> 32.0F\n20C -> 68.0F\n37C -> 98.6F\n100C -> 212.0F\nConversion complete. Systems ONLINE.',
   bugsNote: 'There are no bugs, just a deleted formula.\n\u2022 Look at the steps needed to convert Celsius to Fahrenheit\n\u2022 What would these steps look like as a formula?\n\u2022 You do not need to change anything apart from the return line',
-  hint: 'The bug is on the line inside the function that starts with "return".\n\nThe English instructions say "multiply the Celsius value by nine" — but look at the operator between c and 9 in the code. Is it multiplying, or doing something else?\n\nIn Python:\n  + means add\n  * means multiply\n\nChange the operator so it multiplies, then run the code again.',  code: `# AXIOM Climate Control System
+  hint: 'The forumula should replace "DELETED".\n\nThe formula you are looking for needs the * (multiply), the / (divide) and + (add) symbols.',  code: `# AXIOM Climate Control System
 # STATUS: FORMULA CORRUPTED — FIX ME
 
 def celsius_to_fahrenheit(c):
@@ -399,10 +399,8 @@ const CIPHER = {
     { fragment:'',  word:''},
     { fragment:'',  word:''},
     { fragment:'', word:''},
-    { fragment:'',  word:''},
   ],
-  // SHA-256('VGEF')
-  answerHash: '6c43892762249a066aff0f5965c46073c6304cad5b5a3deab90dae0336d41309',
+  answerHash: 'd783fa553a12e9f5b3e1a39d34d0ec1dac30a3c6b7a7e8b572e5f6980d8914b7',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -732,7 +730,7 @@ function showFinalCipher() {
 
       <div class="cipher-step">
         <div class="cipher-step-header">Step 3 — Reverse the result</div>
-        <div class="cipher-step-body">Take your four result letters in order and reverse the sequence. This is your master override key.</div>
+        <div class="cipher-step-body">Take your three result letters in order and reverse the sequence. This is your master override key.</div>
       </div>
 
       <div class="final-submit-area">
