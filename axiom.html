@@ -203,7 +203,7 @@
         <div class="msg-line"><span class="warn">ALERT:</span> A rogue AI called AXIOM has seized control of all university systems.</div>
         <div class="msg-line">Your team are <span class="highlight">ethical hackers</span>. Your mission: find and fix the bugs in AXIOM's corrupted code modules to restore each system.</div>
         <div class="msg-line">Each puzzle is <span class="amb">locked</span>. Find the <span class="highlight">access code</span> hidden in the room to unlock it.</div>
-        <div class="msg-line">Fix the code so it produces the correct output, and the system will reveal a <span class="highlight">code fragment</span>. Collect all four to attempt the <span class="warn">Final Cipher</span>.</div>
+        <div class="msg-line">Fix the code so it produces the correct output, and the system will reveal a <span class="highlight">code fragment</span>. Collect all three to attempt the <span class="warn">Final Cipher</span>.</div>
         <div class="msg-line" style="margin-top:16px;">When your output matches, <span class="amb">raise your hand</span> for a handler. They will check your code and hand you the fragment card if all looks good.</div>
         <div class="msg-line" style="margin-top:8px;">You have <span class="warn">45 minutes</span>. Good luck.</div>
       </div>
@@ -289,7 +289,7 @@
     <div class="screen" id="screen-victory">
       <div class="victory-title">AXIOM NEUTRALISED — MISSION COMPLETE</div>
       <div class="victory-headline">SYSTEMS RESTORED</div>
-      <div class="victory-msg">All four systems have been repaired. The master override key has been accepted. AXIOM is offline. The university is secure.</div>
+      <div class="victory-msg">All three systems have been repaired. The master override key has been accepted. AXIOM is offline. The university is secure.</div>
       <div><div class="victory-time-label">Time Elapsed</div><div class="victory-time" id="victory-time">—</div></div>
       <button class="btn" onclick="location.reload()">RUN AGAIN</button>
     </div>
@@ -702,7 +702,7 @@ function showFinalCipher() {
     box.innerHTML = `<div class="final-locked">
       <div class="final-lock-icon">⛔</div>
       <div class="briefing-title" style="color:var(--red)">CIPHER LOCKED</div>
-      <div class="final-locked-msg">You need all four code fragments before the cipher can be attempted.<br><br>
+      <div class="final-locked-msg">You need all three passwords before the cipher can be attempted.<br><br>
         Still to restore:<br>${remaining.map(n=>'• '+n).join('<br>')}</div>
       <button class="btn btn-sm btn-red" onclick="showWelcome()">← RETURN TO SYSTEMS</button></div>`;
   } else {
@@ -711,7 +711,7 @@ function showFinalCipher() {
     box.innerHTML = `
       <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Final Cipher</div>
       <div style="font-size:22px;font-weight:800;color:var(--white)">The Master Override</div>
-      <div style="font-size:12px;color:var(--text);line-height:1.8;">Work through the three steps below on paper using your four code fragments. Enter the final key when you have it.</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;">Work through the three steps below on paper using your three passwords. Enter the final key when you have it.</div>
 
 
       <div class="cipher-step">
